@@ -1,52 +1,17 @@
-use firefox_probe::firefox_profile;
+use firefox_probe::{Rank, firefox_places};
 use regex::Regex;
 use sqlite::{Value, open};
-use std::{
-    collections::{BinaryHeap, HashMap},
-    fs::exists,
-};
+use std::collections::{BinaryHeap, HashMap};
 
-#[derive(Debug, Clone, Copy)]
-struct Rank<T, U> {
-    value: T,
-    rank: U,
-}
-impl<T, U> PartialEq for Rank<T, U>
-where
-    U: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.rank == other.rank
-    }
-}
-impl<T, U> Eq for Rank<T, U> where U: Eq {}
-impl<T, U> PartialOrd for Rank<T, U>
-where
-    U: PartialOrd,
-{
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.rank.partial_cmp(&other.rank)
-    }
-}
-impl<T, U> Ord for Rank<T, U>
-where
-    U: Ord,
-{
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.rank.cmp(&other.rank)
-    }
-}
 fn main() {
     let domain_regex = Regex::new("^https?://[^/]+/").unwrap();
-    let mut path = match firefox_profile() {
-        Some(path) => path,
+    let path = match firefox_places() {
+        Some(path) => path.into_iter().next().unwrap(),
         None => {
             println!("Firefox not found");
             return;
         }
     };
-    path.push("places.sqlite");
-    assert!(exists(&path).unwrap());
     let connection = open(path).unwrap();
     let rows = connection
         .prepare("SELECT url, visit_count FROM moz_places")

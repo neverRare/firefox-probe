@@ -4,6 +4,36 @@ use std::{
     path::PathBuf,
 };
 
+#[derive(Debug, Clone, Copy)]
+pub struct Rank<T, U> {
+    pub value: T,
+    pub rank: U,
+}
+impl<T, U> PartialEq for Rank<T, U>
+where
+    U: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.rank == other.rank
+    }
+}
+impl<T, U> Eq for Rank<T, U> where U: Eq {}
+impl<T, U> PartialOrd for Rank<T, U>
+where
+    U: PartialOrd,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.rank.partial_cmp(&other.rank)
+    }
+}
+impl<T, U> Ord for Rank<T, U>
+where
+    U: Ord,
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.rank.cmp(&other.rank)
+    }
+}
 fn firefox_dir() -> Option<PathBuf> {
     let mut path = home_dir()?;
     if cfg!(any(target_os = "linux", target_os = "macos")) {
@@ -44,20 +74,26 @@ fn firefox_dir() -> Option<PathBuf> {
         None
     }
 }
-pub fn firefox_profile() -> Option<PathBuf> {
+pub fn firefox_places() -> Option<impl Iterator<Item = PathBuf>> {
     let path = firefox_dir()?;
-    for entry in read_dir(path).unwrap() {
+    Some(read_dir(path).unwrap().filter_map(|entry| {
         let entry = entry.unwrap();
-        println!("{:?}", entry);
         if entry
             .file_name()
             .as_os_str()
             .to_str()
-            .map(|name| name.ends_with(".default-release"))
+            .map(|name| name.contains("default"))
             .unwrap_or_default()
         {
-            return Some(entry.path());
+            let mut path = entry.path();
+            path.push("places.sqlite");
+            if exists(&path).unwrap() {
+                Some(path)
+            } else {
+                None
+            }
+        } else {
+            None
         }
-    }
-    None
+    }))
 }
