@@ -70,7 +70,7 @@ fn main() {
         *rank += count;
     }
     let mut entries: BinaryHeap<_> = map
-        .drain()
+        .into_iter()
         .map(|(value, rank)| Rank { value, rank })
         .collect();
     for _ in 0..20 {
