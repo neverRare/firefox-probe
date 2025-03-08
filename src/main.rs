@@ -5,13 +5,7 @@ use std::collections::{BinaryHeap, HashMap};
 
 fn main() {
     let domain_regex = Regex::new("^https?://[^/]+/").unwrap();
-    let places = match firefox_places() {
-        Some(path) => path,
-        None => {
-            println!("Firefox not found");
-            return;
-        }
-    };
+    let places = firefox_places().expect("Firefox not found");
     let mut map = HashMap::new();
     for places in places {
         let connection = open(places).unwrap();
@@ -20,20 +14,18 @@ fn main() {
             .unwrap();
         for row in rows {
             let mut row = row.unwrap();
-            let url = match row.take("url") {
-                Value::String(url) => url,
-                _ => panic!("url is not string"),
+            let Value::String(url) = row.take("url") else {
+                panic!("url is not string");
             };
             let domain: Box<str> = match domain_regex.find(&url) {
                 Some(domain) => domain.as_str().into(),
                 None => continue,
             };
-            let count = match row.take("visit_count") {
-                Value::Integer(count) => count as u64,
-                _ => panic!("visit_count is not integer"),
+            let Value::Integer(count) = row.take("visit_count") else {
+                panic!("visit_count is not string;")
             };
             let rank: &mut u64 = map.entry(domain).or_default();
-            *rank += count;
+            *rank += count as u64;
         }
     }
     let mut entries: BinaryHeap<_> = map
